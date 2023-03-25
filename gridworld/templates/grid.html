@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Grid World</title>
+    <style>
+        table {
+            border-collapse: collapse;
+        }
+        td {
+            border: 1px solid black;
+            width: 30px;
+            height: 30px;
+            text-align: center;
+            vertical-align: middle;
+            font-size: 20px;
+        }
+        td.start {
+            background-color: green;
+        }
+        td.end {
+            background-color: red;
+        }
+        td.block {
+            background-color: gray;
+        }
+        td.path {
+            background-color: yellow;
+        }
+    </style>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            var start_i = null;
+            var start_j = null;
+            var end_i = null;
+            var end_j = null;
+
+            $("td").click(function() {
+                var i = $(this).parent().index();
+                var j = $(this).index();
+
+                if ($(this).hasClass("start") || $(this).hasClass("end")) {
+                    // ignore click if cell is already designated as start or end cell
+                    return;
+                }
+
+                if ($(this).hasClass("block")) {
+                    $(this).removeClass("block");
+                } else if (start_i === null && start_j === null) {
+                    $(this).addClass("start");
+                    start_i = i;
+                    start_j = j;
+                } else if (end_i === null && end_j === null) {
+                    $(this).addClass("end");
+                    end_i = i;
+                    end_j = j;
+                } else {
+                    $(this).addClass("block");
+                }
+            });
+
+            function getGrid() {
+                var grid = [];
+                $("table tr").each(function() {
+                    var row = [];
+                    $(this).find("td").each(function() {
+                        if ($(this).hasClass("start")) {
+                            row.push("start");
+                        } else if ($(this).hasClass("end")) {
+                            row.push("end");
+                        } else if ($(this).hasClass("block")) {
+                            row.push("block");
+                        } else {
+                            row.push("empty");
+                        }
+                    });
+                    grid.push(row);
+                });
+                return grid;
+            }
+
+            $("#solve").click(function() {
+                var grid = getGrid();
+                var start = [start_i, start_j];
+                var end = [end_i, end_j];
+                var blocks = [];
+
+                for (var i = 0; i < grid.length; i++) {
+                    for (var j = 0; j < grid[i].length; j++) {
+                        if (grid[i][j] == "block") {
+                            blocks.push([i, j]);
+                        }
+                    }
+                }
+
+                $.ajax({
+                    url: '/solve',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ grid: grid, start: start, end: end, blocks: blocks }),
+                    success: function(response) {
+                        var path = response.path;
+                        for (var i = 0; i < path.length; i++) {
+                            var x = path[i][0];
+                            var y = path[i][1];
+                            if (grid[x][y] != "start" && grid[x][y] != "end") {
+                            $("table tr").eq(x).find("td").eq(y).addClass("path");
+                        }
+                    }
+                }
+            });
+        });
+    });
+    </script>
+</head>
+<body>
+    <h1>Grid World</h1>
+    <p>Click on a cell to determine the start, end,and blocks positions.</p>
+    <table>
+        {% for i in range(n) %}
+            <tr>
+            {% for j in range(n) %}
+                {% if i == start_i and j == start_j %}
+                    <td class="start"></td>
+                {% elif i == end_i and j == end_j %}
+                    <td class="end"></td>
+                {% elif (i, j) in block_cells %}
+                    <td class="block"></td>
+                {% else %}
+                    <td></td>
+                {% endif %}
+            {% endfor %}
+            </tr>
+        {% endfor %}
+    </table>
+    <button id="solve">Solve</button>
+</body>
+</html>
